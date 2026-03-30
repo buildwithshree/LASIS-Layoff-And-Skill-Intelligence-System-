@@ -1,5 +1,6 @@
 package com.lasis.backend.service;
 
+import com.lasis.backend.dto.ApplicationResponseDTO;
 import com.lasis.backend.model.Application;
 import com.lasis.backend.model.JobPosting;
 import com.lasis.backend.model.Student;
@@ -8,8 +9,10 @@ import com.lasis.backend.repository.JobPostingRepository;
 import com.lasis.backend.repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ApplicationService {
@@ -23,60 +26,80 @@ public class ApplicationService {
     @Autowired
     private JobPostingRepository jobPostingRepository;
 
-    public Application applyToJob(Integer studentId, Integer jobId) {
-        if (applicationRepository.existsByStudentStudentIdAndJobPostingJobId(studentId, jobId)) {
-            throw new RuntimeException("Student already applied to this job");
-        }
+    // ─── Mapper: Entity → DTO ───────────────────────────────────────────
+    private ApplicationResponseDTO toDTO(Application application) {
+        ApplicationResponseDTO dto = new ApplicationResponseDTO();
+        dto.setApplicationId(application.getApplicationId());
+        dto.setStudentId(application.getStudent().getStudentId());
+        dto.setStudentName(application.getStudent().getFullName());
+        dto.setJobId(application.getJobPosting().getJobId());
+        dto.setJobTitle(application.getJobPosting().getJobTitle());
+        dto.setCompanyName(application.getJobPosting().getCompany().getCompanyName());
+        dto.setStatus(application.getStatus());
+        dto.setNotes(application.getNotes());
+        dto.setAppliedAt(application.getAppliedAt());
+        dto.setUpdatedAt(application.getUpdatedAt());
+        return dto;
+    }
 
+    // ─── Public Service Methods ─────────────────────────────────────────
+    public ApplicationResponseDTO applyToJob(Integer studentId, Integer jobId) {
         Student student = studentRepository.findById(studentId)
-            .orElseThrow(() -> new RuntimeException("Student not found: " + studentId));
-
+                .orElseThrow(() -> new RuntimeException("Student not found: " + studentId));
         JobPosting job = jobPostingRepository.findById(jobId)
-            .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
+                .orElseThrow(() -> new RuntimeException("Job not found: " + jobId));
 
-        if (!job.getIsActive()) {
-            throw new RuntimeException("Job posting is no longer active");
-        }
+        boolean alreadyApplied = applicationRepository.findAll()
+                .stream()
+                .anyMatch(a -> a.getStudent().getStudentId().equals(studentId)
+                        && a.getJobPosting().getJobId().equals(jobId));
 
-        if (student.getGpa().compareTo(job.getRequiredGpa()) < 0) {
-            throw new RuntimeException("Student GPA does not meet minimum requirement");
-        }
-
-        if (student.getBacklogs() > job.getMaxBacklogs()) {
-            throw new RuntimeException("Student backlogs exceed maximum allowed");
+        if (alreadyApplied) {
+            throw new RuntimeException("Student " + studentId + " has already applied to job " + jobId);
         }
 
         Application application = new Application();
         application.setStudent(student);
         application.setJobPosting(job);
         application.setStatus("applied");
-        return applicationRepository.save(application);
+        Application saved = applicationRepository.save(application);
+        return toDTO(saved);
     }
 
-    public List<Application> getApplicationsByStudent(Integer studentId) {
-        return applicationRepository.findByStudentStudentId(studentId);
+    public List<ApplicationResponseDTO> getApplicationsByStudent(Integer studentId) {
+        return applicationRepository.findAll()
+                .stream()
+                .filter(a -> a.getStudent().getStudentId().equals(studentId))
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
-    public List<Application> getApplicationsByJob(Integer jobId) {
-        return applicationRepository.findByJobPostingJobId(jobId);
+    public List<ApplicationResponseDTO> getApplicationsByJob(Integer jobId) {
+        return applicationRepository.findAll()
+                .stream()
+                .filter(a -> a.getJobPosting().getJobId().equals(jobId))
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
-    public Optional<Application> getApplicationById(Integer id) {
-        return applicationRepository.findById(id);
+    public Optional<ApplicationResponseDTO> getApplicationById(Integer id) {
+        return applicationRepository.findById(id)
+                .map(this::toDTO);
     }
 
-    public Application updateApplicationStatus(Integer applicationId, String status) {
-        return applicationRepository.findById(applicationId).map(application -> {
-            application.setStatus(status);
-            if (status.equals("selected")) {
-                application.getStudent().setIsPlaced(true);
-                studentRepository.save(application.getStudent());
-            }
-            return applicationRepository.save(application);
-        }).orElseThrow(() -> new RuntimeException("Application not found: " + applicationId));
+    public List<ApplicationResponseDTO> getApplicationsByStatus(String status) {
+        return applicationRepository.findAll()
+                .stream()
+                .filter(a -> a.getStatus().equalsIgnoreCase(status))
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
-    public List<Application> getApplicationsByStatus(String status) {
-        return applicationRepository.findByStatus(status);
+    public ApplicationResponseDTO updateApplicationStatus(Integer applicationId, String status) {
+        Application existing = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new RuntimeException("Application not found: " + applicationId));
+        existing.setStatus(status);
+        Application updated = applicationRepository.save(existing);
+        return toDTO(updated);
     }
 }
