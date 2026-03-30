@@ -49,7 +49,7 @@ public class ReadinessController {
     }
 
     @GetMapping("/api/readiness/student/{studentId}")
-    public ResponseEntity<ApiResponse<?>> getStudentReadinessHistory(
+    public ResponseEntity<ApiResponse<List<ReadinessResponseDTO>>> getStudentReadinessHistory(
             @PathVariable Integer studentId) {
         return ResponseEntity.ok(ApiResponse.success("Readiness history fetched successfully",
             readinessService.getStudentReadinessHistory(studentId)));
