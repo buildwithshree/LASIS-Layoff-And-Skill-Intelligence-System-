@@ -1,5 +1,6 @@
 package com.lasis.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Entity
 @Table(name = "applications")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Application {
 
     @Id
@@ -18,11 +20,11 @@ public class Application {
     @Column(name = "application_id")
     private Integer applicationId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "job_id", nullable = false)
     private JobPosting jobPosting;
 
