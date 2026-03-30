@@ -1,8 +1,12 @@
 package com.lasis.backend.controller;
 
-import com.lasis.backend.model.JobPosting;
+import com.lasis.backend.dto.ApiResponse;
+import com.lasis.backend.dto.JobPostingRequestDTO;
+import com.lasis.backend.dto.JobPostingResponseDTO;
 import com.lasis.backend.service.JobPostingService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
@@ -17,60 +21,64 @@ public class JobPostingController {
     private JobPostingService jobPostingService;
 
     @GetMapping
-    public List<JobPosting> getAllJobs() {
-        return jobPostingService.getAllJobs();
+    public ResponseEntity<ApiResponse<List<JobPostingResponseDTO>>> getAllJobs() {
+        return ResponseEntity.ok(ApiResponse.success("Jobs fetched successfully", jobPostingService.getAllJobs()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<JobPosting> getJobById(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponse<JobPostingResponseDTO>> getJobById(@PathVariable Integer id) {
         return jobPostingService.getJobById(id)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
+            .map(j -> ResponseEntity.ok(ApiResponse.success("Job fetched successfully", j)))
+            .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error("Job not found with id: " + id)));
     }
 
     @GetMapping("/active")
-    public List<JobPosting> getActiveJobs() {
-        return jobPostingService.getActiveJobs();
+    public ResponseEntity<ApiResponse<List<JobPostingResponseDTO>>> getActiveJobs() {
+        return ResponseEntity.ok(ApiResponse.success("Active jobs fetched successfully", jobPostingService.getActiveJobs()));
     }
 
     @GetMapping("/company/{companyId}")
-    public List<JobPosting> getJobsByCompany(@PathVariable Integer companyId) {
-        return jobPostingService.getJobsByCompany(companyId);
+    public ResponseEntity<ApiResponse<List<JobPostingResponseDTO>>> getJobsByCompany(@PathVariable Integer companyId) {
+        return ResponseEntity.ok(ApiResponse.success("Jobs fetched successfully", jobPostingService.getJobsByCompany(companyId)));
     }
 
     @GetMapping("/eligible")
-    public List<JobPosting> getEligibleJobs(
+    public ResponseEntity<ApiResponse<List<JobPostingResponseDTO>>> getEligibleJobs(
             @RequestParam(defaultValue = "7.0") BigDecimal gpa,
             @RequestParam(defaultValue = "0") Integer backlogs) {
-        return jobPostingService.getEligibleJobs(gpa, backlogs);
+        return ResponseEntity.ok(ApiResponse.success("Eligible jobs fetched successfully",
+            jobPostingService.getEligibleJobs(gpa, backlogs)));
     }
 
     @GetMapping("/search")
-    public List<JobPosting> searchJobs(@RequestParam String keyword) {
-        return jobPostingService.searchJobsByTitle(keyword);
+    public ResponseEntity<ApiResponse<List<JobPostingResponseDTO>>> searchJobs(@RequestParam String keyword) {
+        return ResponseEntity.ok(ApiResponse.success("Search results fetched successfully",
+            jobPostingService.searchJobsByTitle(keyword)));
     }
 
     @PostMapping
-    public JobPosting createJobPosting(@RequestBody JobPosting jobPosting) {
-        return jobPostingService.createJobPosting(jobPosting);
+    public ResponseEntity<ApiResponse<JobPostingResponseDTO>> createJobPosting(@Valid @RequestBody JobPostingRequestDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(ApiResponse.success("Job posting created successfully", jobPostingService.createJobPosting(dto)));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<JobPosting> updateJobPosting(@PathVariable Integer id,
-                                                        @RequestBody JobPosting jobPosting) {
+    public ResponseEntity<ApiResponse<JobPostingResponseDTO>> updateJobPosting(
+            @PathVariable Integer id, @Valid @RequestBody JobPostingRequestDTO dto) {
         try {
-            return ResponseEntity.ok(jobPostingService.updateJobPosting(id, jobPosting));
+            return ResponseEntity.ok(ApiResponse.success("Job posting updated successfully", jobPostingService.updateJobPosting(id, dto)));
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
         }
     }
 
     @PutMapping("/{id}/close")
-    public ResponseEntity<JobPosting> closeJobPosting(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponse<JobPostingResponseDTO>> closeJobPosting(@PathVariable Integer id) {
         try {
-            return ResponseEntity.ok(jobPostingService.closeJobPosting(id));
+            return ResponseEntity.ok(ApiResponse.success("Job posting closed", jobPostingService.closeJobPosting(id)));
         } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
         }
     }
 }

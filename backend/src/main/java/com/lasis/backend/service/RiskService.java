@@ -1,5 +1,6 @@
 package com.lasis.backend.service;
 
+import com.lasis.backend.dto.RiskProfileResponseDTO;
 import com.lasis.backend.model.Company;
 import com.lasis.backend.model.CompanyRiskProfile;
 import com.lasis.backend.model.RiskSignal;
@@ -14,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class RiskService {
@@ -27,20 +29,43 @@ public class RiskService {
     @Autowired
     private RiskSignalRepository riskSignalRepository;
 
-    public List<CompanyRiskProfile> getAllRiskProfiles() {
-        return riskProfileRepository.findAllOrderByRiskIndexAsc();
+    private RiskProfileResponseDTO toDTO(CompanyRiskProfile p) {
+        return new RiskProfileResponseDTO(
+            p.getRiskProfileId(),
+            p.getCompany() != null ? p.getCompany().getCompanyId() : null,
+            p.getCompany() != null ? p.getCompany().getCompanyName() : null,
+            p.getCompany() != null ? p.getCompany().getSector() : null,
+            p.getLayoffFrequency(),
+            p.getLastLayoffDate(),
+            p.getLayoffCount2024(),
+            p.getLayoffCount2025(),
+            p.getHiringTrend(),
+            p.getRevenueGrowth(),
+            p.getAutomationImpact(),
+            p.getStabilityScore(),
+            p.getRiskIndex(),
+            p.getRiskLevel(),
+            p.getLastCalculatedAt()
+        );
     }
 
-    public Optional<CompanyRiskProfile> getRiskProfileByCompany(Integer companyId) {
-        return riskProfileRepository.findByCompanyCompanyId(companyId);
+    public List<RiskProfileResponseDTO> getAllRiskProfiles() {
+        return riskProfileRepository.findAllOrderByRiskIndexAsc()
+            .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    public List<CompanyRiskProfile> getSafeCompanies() {
-        return riskProfileRepository.findSafeCompanies();
+    public Optional<RiskProfileResponseDTO> getRiskProfileByCompany(Integer companyId) {
+        return riskProfileRepository.findByCompanyCompanyId(companyId).map(this::toDTO);
     }
 
-    public List<CompanyRiskProfile> getHighRiskCompanies() {
-        return riskProfileRepository.findHighRiskCompanies();
+    public List<RiskProfileResponseDTO> getSafeCompanies() {
+        return riskProfileRepository.findSafeCompanies()
+            .stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
+    public List<RiskProfileResponseDTO> getHighRiskCompanies() {
+        return riskProfileRepository.findHighRiskCompanies()
+            .stream().map(this::toDTO).collect(Collectors.toList());
     }
 
     public RiskSignal addRiskSignal(Integer companyId, RiskSignal signal) {
@@ -48,7 +73,6 @@ public class RiskService {
             .orElseThrow(() -> new RuntimeException("Company not found: " + companyId));
         signal.setCompany(company);
         RiskSignal saved = riskSignalRepository.save(signal);
-        // recalculate risk after new signal
         recalculateRisk(companyId);
         return saved;
     }
@@ -58,28 +82,22 @@ public class RiskService {
             .findByCompanyCompanyId(companyId)
             .orElseThrow(() -> new RuntimeException("Risk profile not found for company: " + companyId));
 
-        // hiring score
-        BigDecimal hiringScore;
-        switch (profile.getHiringTrend()) {
-            case "growing"   -> hiringScore = BigDecimal.ZERO;
-            case "stable"    -> hiringScore = new BigDecimal("25");
-            case "declining" -> hiringScore = new BigDecimal("75");
-            case "frozen"    -> hiringScore = new BigDecimal("100");
-            default          -> hiringScore = new BigDecimal("25");
-        }
+        BigDecimal hiringScore = switch (profile.getHiringTrend()) {
+            case "growing"   -> BigDecimal.ZERO;
+            case "stable"    -> new BigDecimal("25");
+            case "declining" -> new BigDecimal("75");
+            case "frozen"    -> new BigDecimal("100");
+            default          -> new BigDecimal("25");
+        };
 
-        // automation score
-        BigDecimal automationScore;
-        switch (profile.getAutomationImpact()) {
-            case "low"      -> automationScore = BigDecimal.ZERO;
-            case "medium"   -> automationScore = new BigDecimal("33");
-            case "high"     -> automationScore = new BigDecimal("66");
-            case "critical" -> automationScore = new BigDecimal("100");
-            default         -> automationScore = new BigDecimal("33");
-        }
+        BigDecimal automationScore = switch (profile.getAutomationImpact()) {
+            case "low"      -> BigDecimal.ZERO;
+            case "medium"   -> new BigDecimal("33");
+            case "high"     -> new BigDecimal("66");
+            case "critical" -> new BigDecimal("100");
+            default         -> new BigDecimal("33");
+        };
 
-        // risk index formula
-        // riskIndex = (0.4 × layoffFrequency × 10) + (0.3 × hiringScore) + (0.3 × automationScore)
         BigDecimal riskIndex = profile.getLayoffFrequency()
             .multiply(new BigDecimal("10"))
             .multiply(new BigDecimal("0.4"))
@@ -87,19 +105,16 @@ public class RiskService {
             .add(automationScore.multiply(new BigDecimal("0.3")))
             .setScale(2, RoundingMode.HALF_UP);
 
-        // stability score
         BigDecimal stabilityScore = new BigDecimal("100")
             .subtract(riskIndex)
             .setScale(2, RoundingMode.HALF_UP);
 
-        // risk level
         String riskLevel;
         if (riskIndex.compareTo(new BigDecimal("70")) >= 0)      riskLevel = "critical";
         else if (riskIndex.compareTo(new BigDecimal("50")) >= 0) riskLevel = "high";
         else if (riskIndex.compareTo(new BigDecimal("25")) >= 0) riskLevel = "medium";
         else                                                      riskLevel = "low";
 
-        // recommendation
         String recommendation;
         if (riskIndex.compareTo(new BigDecimal("70")) >= 0)
             recommendation = "Very high risk. Strongly advise against applying.";
@@ -110,13 +125,11 @@ public class RiskService {
         else
             recommendation = "Low risk. Safe to apply.";
 
-        // update profile
         profile.setRiskIndex(riskIndex);
         profile.setStabilityScore(stabilityScore);
         profile.setRiskLevel(riskLevel);
         riskProfileRepository.save(profile);
 
-        // build response
         Map<String, Object> result = new HashMap<>();
         result.put("companyId", companyId);
         result.put("companyName", profile.getCompany().getCompanyName());
@@ -131,7 +144,7 @@ public class RiskService {
     }
 
     public Map<String, Object> getRiskDashboard() {
-        List<CompanyRiskProfile> all = riskProfileRepository.findAllOrderByRiskIndexAsc();
+        List<RiskProfileResponseDTO> all = getAllRiskProfiles();
         Map<String, Object> dashboard = new HashMap<>();
         dashboard.put("totalCompanies", all.size());
         dashboard.put("safeCompanies", all.stream().filter(p -> p.getRiskLevel().equals("low")).count());
@@ -140,5 +153,10 @@ public class RiskService {
         dashboard.put("criticalRiskCompanies", all.stream().filter(p -> p.getRiskLevel().equals("critical")).count());
         dashboard.put("profiles", all);
         return dashboard;
+    }
+
+    // Used internally by ReadinessService
+    public Optional<CompanyRiskProfile> getRiskProfileEntityByCompany(Integer companyId) {
+        return riskProfileRepository.findByCompanyCompanyId(companyId);
     }
 }

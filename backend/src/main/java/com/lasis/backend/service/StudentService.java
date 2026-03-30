@@ -1,5 +1,7 @@
 package com.lasis.backend.service;
 
+import com.lasis.backend.dto.StudentRequestDTO;
+import com.lasis.backend.dto.StudentResponseDTO;
 import com.lasis.backend.model.Department;
 import com.lasis.backend.model.Student;
 import com.lasis.backend.repository.DepartmentRepository;
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class StudentService {
@@ -19,60 +22,96 @@ public class StudentService {
     @Autowired
     private DepartmentRepository departmentRepository;
 
-    public List<Student> getAllStudents() {
-        return studentRepository.findAll();
+    private StudentResponseDTO toDTO(Student s) {
+        return new StudentResponseDTO(
+            s.getStudentId(),
+            s.getFullName(),
+            s.getEmail(),
+            s.getPhone(),
+            s.getDepartment() != null ? s.getDepartment().getDepartmentId() : null,
+            s.getDepartment() != null ? s.getDepartment().getDeptName() : null,
+            s.getGpa(),
+            s.getGraduationYear(),
+            s.getBacklogs(),
+            s.getResumeUrl(),
+            s.getProjectScore(),
+            s.getIsPlaced(),
+            s.getIsActive(),
+            s.getCreatedAt(),
+            s.getUpdatedAt()
+        );
     }
 
-    public Optional<Student> getStudentById(Integer id) {
-        return studentRepository.findById(id);
+    private Student toEntity(StudentRequestDTO dto) {
+        Department dept = departmentRepository.findById(dto.getDepartmentId())
+            .orElseThrow(() -> new RuntimeException("Department not found: " + dto.getDepartmentId()));
+        Student student = new Student();
+        student.setFullName(dto.getFullName());
+        student.setEmail(dto.getEmail());
+        student.setPhone(dto.getPhone());
+        student.setDepartment(dept);
+        student.setGpa(dto.getGpa());
+        student.setGraduationYear(dto.getGraduationYear());
+        student.setBacklogs(dto.getBacklogs());
+        student.setResumeUrl(dto.getResumeUrl());
+        student.setProjectScore(dto.getProjectScore());
+        student.setIsPlaced(dto.getIsPlaced());
+        student.setIsActive(dto.getIsActive());
+        return student;
     }
 
-    public Optional<Student> getStudentByEmail(String email) {
-        return studentRepository.findByEmail(email);
+    public List<StudentResponseDTO> getAllStudents() {
+        return studentRepository.findAll().stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    public List<Student> getUnplacedStudents() {
-        return studentRepository.findByIsPlacedFalse();
+    public Optional<StudentResponseDTO> getStudentById(Integer id) {
+        return studentRepository.findById(id).map(this::toDTO);
     }
 
-    public List<Student> getEligibleStudents(BigDecimal minGpa, Integer maxBacklogs) {
-        return studentRepository.findEligibleStudents(minGpa, maxBacklogs);
+    public List<StudentResponseDTO> getUnplacedStudents() {
+        return studentRepository.findByIsPlacedFalse().stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    public List<Student> getStudentsByDepartment(Integer departmentId) {
-        return studentRepository.findByDepartmentDepartmentId(departmentId);
+    public List<StudentResponseDTO> getEligibleStudents(BigDecimal minGpa, Integer maxBacklogs) {
+        return studentRepository.findEligibleStudents(minGpa, maxBacklogs).stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    public Student createStudent(Student student) {
-        return studentRepository.save(student);
+    public List<StudentResponseDTO> getStudentsByDepartment(Integer departmentId) {
+        return studentRepository.findByDepartmentDepartmentId(departmentId).stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    public Student updateStudent(Integer id, Student updated) {
+    public StudentResponseDTO createStudent(StudentRequestDTO dto) {
+        return toDTO(studentRepository.save(toEntity(dto)));
+    }
+
+    public StudentResponseDTO updateStudent(Integer id, StudentRequestDTO dto) {
         return studentRepository.findById(id).map(student -> {
-            student.setFullName(updated.getFullName());
-            student.setEmail(updated.getEmail());
-            student.setPhone(updated.getPhone());
-            student.setGpa(updated.getGpa());
-            student.setGraduationYear(updated.getGraduationYear());
-            student.setBacklogs(updated.getBacklogs());
-            student.setResumeUrl(updated.getResumeUrl());
-            student.setProjectScore(updated.getProjectScore());
-            student.setIsPlaced(updated.getIsPlaced());
-            student.setIsActive(updated.getIsActive());
-            if (updated.getDepartment() != null) {
-                Department dept = departmentRepository
-                    .findById(updated.getDepartment().getDepartmentId())
-                    .orElseThrow(() -> new RuntimeException("Department not found"));
-                student.setDepartment(dept);
-            }
-            return studentRepository.save(student);
+            Department dept = departmentRepository.findById(dto.getDepartmentId())
+                .orElseThrow(() -> new RuntimeException("Department not found: " + dto.getDepartmentId()));
+            student.setFullName(dto.getFullName());
+            student.setEmail(dto.getEmail());
+            student.setPhone(dto.getPhone());
+            student.setDepartment(dept);
+            student.setGpa(dto.getGpa());
+            student.setGraduationYear(dto.getGraduationYear());
+            student.setBacklogs(dto.getBacklogs());
+            student.setResumeUrl(dto.getResumeUrl());
+            student.setProjectScore(dto.getProjectScore());
+            student.setIsPlaced(dto.getIsPlaced());
+            student.setIsActive(dto.getIsActive());
+            return toDTO(studentRepository.save(student));
         }).orElseThrow(() -> new RuntimeException("Student not found: " + id));
     }
 
-    public Student markAsPlaced(Integer studentId) {
+    public StudentResponseDTO markAsPlaced(Integer studentId) {
         return studentRepository.findById(studentId).map(student -> {
             student.setIsPlaced(true);
-            return studentRepository.save(student);
+            return toDTO(studentRepository.save(student));
         }).orElseThrow(() -> new RuntimeException("Student not found: " + studentId));
+    }
+
+    // Used internally by other services
+    public Optional<Student> getStudentEntityById(Integer id) {
+        return studentRepository.findById(id);
     }
 }
