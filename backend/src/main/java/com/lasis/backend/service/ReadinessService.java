@@ -79,7 +79,10 @@ public class ReadinessService {
             studentSkillMap.put(ss.getSkill().getSkillName().toLowerCase(), weight);
         }
 
-        String[] requiredSkillsArray = job.getRequiredSkills().split(",");
+        String[] requiredSkillsArray = job.getRequiredSkills() != null
+            ? job.getRequiredSkills().split(",")
+            : new String[]{};
+
         BigDecimal totalWeight   = BigDecimal.ZERO;
         BigDecimal matchedWeight = BigDecimal.ZERO;
         List<String> missingSkills = new ArrayList<>();
@@ -183,5 +186,12 @@ public class ReadinessService {
     public List<ReadinessResponseDTO> getStudentReadinessHistory(Integer studentId) {
         return readinessScoreRepository.findByStudentOrderByScoreDesc(studentId)
             .stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
+    public Optional<ReadinessResponseDTO> getReadinessByStudentAndJob(
+            Integer studentId, Integer jobId) {
+        return readinessScoreRepository
+            .findByStudentStudentIdAndJobPostingJobId(studentId, jobId)
+            .map(this::toDTO);
     }
 }

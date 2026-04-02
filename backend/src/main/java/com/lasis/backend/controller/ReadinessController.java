@@ -55,6 +55,16 @@ public class ReadinessController {
             readinessService.getStudentReadinessHistory(studentId)));
     }
 
+    @GetMapping("/api/readiness/student/{studentId}/job/{jobId}")
+    public ResponseEntity<ApiResponse<ReadinessResponseDTO>> getReadinessByStudentAndJob(
+            @PathVariable Integer studentId, @PathVariable Integer jobId) {
+        return readinessService.getReadinessByStudentAndJob(studentId, jobId)
+            .map(dto -> ResponseEntity.ok(ApiResponse.success("Readiness fetched successfully", dto)))
+            .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error("No readiness record found for student "
+                    + studentId + " and job " + jobId)));
+    }
+
     // =============================================
     // RISK ENDPOINTS
     // =============================================
