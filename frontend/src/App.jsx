@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import StudentDashboard from "./pages/StudentDashboard";
+import Companies from "./pages/Companies";
 
 const PlaceholderPage = ({ title }) => (
   <div className="flex items-center justify-center min-h-64">
@@ -32,7 +33,7 @@ const App = () => {
 
           {/* Student */}
           <Route path="/dashboard" element={<ProtectedLayout allowedRoles={["STUDENT"]}><StudentDashboard /></ProtectedLayout>} />
-          <Route path="/companies" element={<ProtectedLayout allowedRoles={["STUDENT"]}><PlaceholderPage title="Companies" /></ProtectedLayout>} />
+          <Route path="/companies" element={<ProtectedLayout allowedRoles={["STUDENT"]}><Companies /></ProtectedLayout>} />
           <Route path="/jobs" element={<ProtectedLayout allowedRoles={["STUDENT"]}><PlaceholderPage title="Jobs" /></ProtectedLayout>} />
           <Route path="/readiness" element={<ProtectedLayout allowedRoles={["STUDENT"]}><PlaceholderPage title="My Readiness" /></ProtectedLayout>} />
 
