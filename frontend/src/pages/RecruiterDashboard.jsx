@@ -300,6 +300,8 @@ function ApplicantCard({ application, readiness, onStatusChange, updatingId }) {
     ? readiness.missingSkills.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
 
+  const isUpdating = updatingId === application.applicationId;
+
   return (
     <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
       <div className="flex items-start justify-between gap-4">
@@ -329,16 +331,26 @@ function ApplicantCard({ application, readiness, onStatusChange, updatingId }) {
             </div>
           )}
 
+          {/* Status badge shown when not updating */}
+          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusBadge(application.status)}`}>
+            {application.status}
+          </span>
+
+          {/* Separate clean dropdown for changing status */}
           <select
             value={application.status}
             onChange={(e) => onStatusChange(application.applicationId, e.target.value)}
-            disabled={updatingId === application.applicationId}
-            className={`text-xs font-medium px-2.5 py-1 rounded-full border-0 focus:outline-none focus:ring-1 focus:ring-teal-400 cursor-pointer ${statusBadge(application.status)}`}
+            disabled={isUpdating}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-600 focus:outline-none focus:border-teal-500 cursor-pointer disabled:opacity-50"
           >
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
+
+          {isUpdating && (
+            <span className="text-xs text-gray-400 animate-pulse">Saving...</span>
+          )}
         </div>
       </div>
 
@@ -374,15 +386,15 @@ function ApplicantCard({ application, readiness, onStatusChange, updatingId }) {
 export default function RecruiterDashboard() {
   const { user } = useAuth();
 
-  const [company, setCompany]           = useState(null);
-  const [jobs, setJobs]                 = useState([]);
+  const [company, setCompany]                 = useState(null);
+  const [jobs, setJobs]                       = useState([]);
   const [applicationsMap, setApplicationsMap] = useState({});
-  const [readinessMap, setReadinessMap] = useState({});
-  const [expandedJob, setExpandedJob]   = useState(null);
-  const [showPostModal, setShowPostModal] = useState(false);
-  const [updatingId, setUpdatingId]     = useState(null);
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState(null);
+  const [readinessMap, setReadinessMap]       = useState({});
+  const [expandedJob, setExpandedJob]         = useState(null);
+  const [showPostModal, setShowPostModal]     = useState(false);
+  const [updatingId, setUpdatingId]           = useState(null);
+  const [loading, setLoading]                 = useState(true);
+  const [error, setError]                     = useState(null);
 
   useEffect(() => {
     fetchAll();
@@ -403,7 +415,6 @@ export default function RecruiterDashboard() {
       const jobList = jobsRes.data.data || [];
       setJobs(jobList);
 
-      // fetch applicants for each job in parallel
       await Promise.all(jobList.map((job) => fetchApplicants(job.jobId)));
     } catch (err) {
       if (err.response?.status === 404) {
@@ -421,11 +432,7 @@ export default function RecruiterDashboard() {
       const res = await api.get(`/applications/job/${jobId}`);
       const apps = res.data.data || [];
       setApplicationsMap((prev) => ({ ...prev, [jobId]: apps }));
-
-      // fetch readiness for each applicant
-      apps.forEach((app) => {
-        fetchReadiness(app.studentId, jobId);
-      });
+      apps.forEach((app) => fetchReadiness(app.studentId, jobId));
     } catch {
       setApplicationsMap((prev) => ({ ...prev, [jobId]: [] }));
     }
@@ -440,7 +447,7 @@ export default function RecruiterDashboard() {
         setReadinessMap((prev) => ({ ...prev, [key]: data }));
       }
     } catch {
-      // no readiness record yet — expected for new applicants
+      // no readiness record yet — expected
     }
   }
 
@@ -448,11 +455,21 @@ export default function RecruiterDashboard() {
     setUpdatingId(applicationId);
     try {
       await api.put(`/applications/${applicationId}/status?status=${newStatus}`);
-      // refresh all applicants to reflect new status
-      const jobList = jobs;
-      await Promise.all(jobList.map((job) => fetchApplicants(job.jobId)));
+      // optimistic update — update local state immediately without full refetch
+      setApplicationsMap((prev) => {
+        const updated = { ...prev };
+        for (const jobId in updated) {
+          updated[jobId] = updated[jobId].map((app) =>
+            app.applicationId === applicationId
+              ? { ...app, status: newStatus }
+              : app
+          );
+        }
+        return updated;
+      });
     } catch {
-      // status update failed — silently keep old state, user can retry
+      // failed — refetch to restore correct state
+      await Promise.all(jobs.map((job) => fetchApplicants(job.jobId)));
     } finally {
       setUpdatingId(null);
     }
@@ -475,8 +492,6 @@ export default function RecruiterDashboard() {
     }
   }
 
-  // ── loading ────────────────────────────────────────────────────────────────
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64 text-sm text-gray-400">
@@ -484,8 +499,6 @@ export default function RecruiterDashboard() {
       </div>
     );
   }
-
-  // ── no company linked ──────────────────────────────────────────────────────
 
   if (error === "no_company") {
     return (
@@ -495,8 +508,8 @@ export default function RecruiterDashboard() {
             No company linked to your account
           </p>
           <p className="text-xs text-gray-400 mt-2">
-            Your login email ({user?.email}) is not linked to any company in
-            the system. Contact your LASIS administrator to link your account.
+            Your login email ({user?.email}) is not linked to any company.
+            Contact your LASIS administrator.
           </p>
         </div>
       </div>
@@ -511,8 +524,6 @@ export default function RecruiterDashboard() {
     );
   }
 
-  // ── derived stats ──────────────────────────────────────────────────────────
-
   const totalApplications = Object.values(applicationsMap).reduce(
     (sum, apps) => sum + apps.length, 0
   );
@@ -520,8 +531,6 @@ export default function RecruiterDashboard() {
     .flat()
     .filter((a) => a.status === "SELECTED").length;
   const activeJobs = jobs.filter((j) => j.isActive).length;
-
-  // ── render ────────────────────────────────────────────────────────────────
 
   return (
     <div>
@@ -556,22 +565,16 @@ export default function RecruiterDashboard() {
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <p className="text-xs text-gray-400">Active roles</p>
           <p className="text-2xl font-medium text-gray-900 mt-1">{activeJobs}</p>
-          <p className="text-xs text-gray-400 mt-1">
-            {jobs.length} total posted
-          </p>
+          <p className="text-xs text-gray-400 mt-1">{jobs.length} total posted</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <p className="text-xs text-gray-400">Total applicants</p>
-          <p className="text-2xl font-medium text-gray-900 mt-1">
-            {totalApplications}
-          </p>
+          <p className="text-2xl font-medium text-gray-900 mt-1">{totalApplications}</p>
           <p className="text-xs text-gray-400 mt-1">Across all roles</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <p className="text-xs text-gray-400">Selected</p>
-          <p className="text-2xl font-medium text-teal-700 mt-1">
-            {totalSelected}
-          </p>
+          <p className="text-2xl font-medium text-teal-700 mt-1">{totalSelected}</p>
           <p className="text-xs text-gray-400 mt-1">Offers extended</p>
         </div>
       </div>
@@ -587,45 +590,39 @@ export default function RecruiterDashboard() {
       ) : (
         <div className="flex flex-col gap-3">
           {jobs.map((job) => {
-            const apps    = applicationsMap[job.jobId] || [];
-            const isOpen  = expandedJob === job.jobId;
+            const apps   = applicationsMap[job.jobId] || [];
+            const isOpen = expandedJob === job.jobId;
 
             return (
               <div
                 key={job.jobId}
                 className="bg-white border border-gray-200 rounded-xl overflow-hidden"
               >
-                {/* Job row */}
                 <div
                   className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => setExpandedJob(isOpen ? null : job.jobId)}
                 >
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-gray-900">
-                          {job.jobTitle}
-                        </p>
-                        {!job.isActive && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                            Closed
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {job.jobType} · {job.openings} opening
-                        {job.openings !== 1 ? "s" : ""} ·{" "}
-                        {job.requiredGpa} GPA min
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-gray-900">
+                        {job.jobTitle}
                       </p>
+                      {!job.isActive && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                          Closed
+                        </span>
+                      )}
                     </div>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {job.jobType} · {job.openings} opening
+                      {job.openings !== 1 ? "s" : ""} · {job.requiredGpa} GPA min
+                    </p>
                   </div>
 
                   <div className="flex items-center gap-6">
                     <div className="text-right">
                       <p className="text-xs text-gray-400">Applicants</p>
-                      <p className="text-sm font-medium text-gray-800">
-                        {apps.length}
-                      </p>
+                      <p className="text-sm font-medium text-gray-800">{apps.length}</p>
                     </div>
 
                     {job.salaryMin && job.salaryMax && (
@@ -665,15 +662,11 @@ export default function RecruiterDashboard() {
                   </div>
                 </div>
 
-                {/* Expanded — required skills + applicants */}
                 {isOpen && (
                   <div className="px-6 pb-6 border-t border-gray-100">
-                    {/* Required skills */}
                     {job.requiredSkills && (
                       <div className="mt-4 mb-5">
-                        <p className="text-xs text-gray-400 mb-2">
-                          Required skills
-                        </p>
+                        <p className="text-xs text-gray-400 mb-2">Required skills</p>
                         <div className="flex flex-wrap gap-2">
                           {job.requiredSkills
                             .split(",")
@@ -691,7 +684,6 @@ export default function RecruiterDashboard() {
                       </div>
                     )}
 
-                    {/* Applicants */}
                     <p className="text-xs text-gray-400 mb-3">
                       Applicants ({apps.length})
                     </p>

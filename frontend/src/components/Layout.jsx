@@ -10,7 +10,6 @@ const studentNav = [
 
 const recruiterNav = [
   { label: "Dashboard", path: "/recruiter" },
-  { label: "Applications", path: "/applications" },
 ];
 
 const adminNav = [
@@ -21,9 +20,9 @@ const adminNav = [
 ];
 
 const navByRole = {
-  STUDENT: studentNav,
+  STUDENT:   studentNav,
   RECRUITER: recruiterNav,
-  ADMIN: adminNav,
+  ADMIN:     adminNav,
 };
 
 const Layout = ({ children }) => {
@@ -79,7 +78,9 @@ const Layout = ({ children }) => {
               {initials}
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-medium text-gray-800 truncate">{user?.fullName}</p>
+              <p className="text-sm font-medium text-gray-800 truncate">
+                {user?.fullName}
+              </p>
               <p className="text-xs text-gray-400 truncate">{user?.role}</p>
             </div>
           </div>
