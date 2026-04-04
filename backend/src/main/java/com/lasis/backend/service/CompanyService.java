@@ -26,6 +26,7 @@ public class CompanyService {
             company.getHeadquarters(),
             company.getWebsite(),
             company.getIsActiveRecruiter(),
+            company.getRecruiterEmail(),
             company.getCreatedAt(),
             company.getUpdatedAt()
         );
@@ -40,6 +41,7 @@ public class CompanyService {
         company.setHeadquarters(dto.getHeadquarters());
         company.setWebsite(dto.getWebsite());
         company.setIsActiveRecruiter(dto.getIsActiveRecruiter());
+        company.setRecruiterEmail(dto.getRecruiterEmail());
         return company;
     }
 
@@ -50,6 +52,10 @@ public class CompanyService {
 
     public Optional<CompanyResponseDTO> getCompanyById(Integer id) {
         return companyRepository.findById(id).map(this::toDTO);
+    }
+
+    public Optional<CompanyResponseDTO> getCompanyByRecruiterEmail(String email) {
+        return companyRepository.findByRecruiterEmail(email).map(this::toDTO);
     }
 
     public List<CompanyResponseDTO> getActiveCompanies() {
@@ -80,11 +86,11 @@ public class CompanyService {
             company.setHeadquarters(dto.getHeadquarters());
             company.setWebsite(dto.getWebsite());
             company.setIsActiveRecruiter(dto.getIsActiveRecruiter());
+            company.setRecruiterEmail(dto.getRecruiterEmail());
             return toDTO(companyRepository.save(company));
         }).orElseThrow(() -> new RuntimeException("Company not found: " + id));
     }
 
-    // Used internally by other services (RiskService etc.)
     public Optional<Company> getCompanyEntityById(Integer id) {
         return companyRepository.findById(id);
     }

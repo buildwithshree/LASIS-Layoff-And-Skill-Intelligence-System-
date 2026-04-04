@@ -21,50 +21,54 @@ public class CompanyController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<CompanyResponseDTO>>> getAllCompanies() {
-        List<CompanyResponseDTO> companies = companyService.getAllCompanies();
-        return ResponseEntity.ok(ApiResponse.success("Companies fetched successfully", companies));
+        return ResponseEntity.ok(ApiResponse.success("Companies fetched successfully",
+            companyService.getAllCompanies()));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<CompanyResponseDTO>> getCompanyById(@PathVariable Integer id) {
         return companyService.getCompanyById(id)
-            .map(company -> ResponseEntity.ok(ApiResponse.success("Company fetched successfully", company)))
+            .map(c -> ResponseEntity.ok(ApiResponse.success("Company fetched successfully", c)))
             .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error("Company not found with id: " + id)));
     }
 
+    @GetMapping("/recruiter/by-email/{email}")
+    public ResponseEntity<ApiResponse<CompanyResponseDTO>> getCompanyByRecruiterEmail(
+            @PathVariable String email) {
+        return companyService.getCompanyByRecruiterEmail(email)
+            .map(c -> ResponseEntity.ok(ApiResponse.success("Company fetched successfully", c)))
+            .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error("No company linked to recruiter email: " + email)));
+    }
+
     @GetMapping("/active")
     public ResponseEntity<ApiResponse<List<CompanyResponseDTO>>> getActiveCompanies() {
-        List<CompanyResponseDTO> companies = companyService.getActiveCompanies();
-        return ResponseEntity.ok(ApiResponse.success("Active companies fetched successfully", companies));
+        return ResponseEntity.ok(ApiResponse.success("Active companies fetched successfully",
+            companyService.getActiveCompanies()));
     }
 
     @GetMapping("/sector/{sector}")
-    public ResponseEntity<ApiResponse<List<CompanyResponseDTO>>> getCompaniesBySector(@PathVariable String sector) {
-        List<CompanyResponseDTO> companies = companyService.getCompaniesBySector(sector);
-        return ResponseEntity.ok(ApiResponse.success("Companies in sector '" + sector + "' fetched successfully", companies));
-    }
-
-    @GetMapping("/type/{type}")
-    public ResponseEntity<ApiResponse<List<CompanyResponseDTO>>> getCompaniesByType(@PathVariable String type) {
-        List<CompanyResponseDTO> companies = companyService.getCompaniesByType(type);
-        return ResponseEntity.ok(ApiResponse.success("Companies of type '" + type + "' fetched successfully", companies));
+    public ResponseEntity<ApiResponse<List<CompanyResponseDTO>>> getCompaniesBySector(
+            @PathVariable String sector) {
+        return ResponseEntity.ok(ApiResponse.success("Companies fetched successfully",
+            companyService.getCompaniesBySector(sector)));
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<CompanyResponseDTO>> createCompany(@Valid @RequestBody CompanyRequestDTO dto) {
-        CompanyResponseDTO created = companyService.createCompany(dto);
+    public ResponseEntity<ApiResponse<CompanyResponseDTO>> createCompany(
+            @Valid @RequestBody CompanyRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.success("Company created successfully", created));
+            .body(ApiResponse.success("Company created successfully",
+                companyService.createCompany(dto)));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<CompanyResponseDTO>> updateCompany(
-            @PathVariable Integer id,
-            @Valid @RequestBody CompanyRequestDTO dto) {
+            @PathVariable Integer id, @Valid @RequestBody CompanyRequestDTO dto) {
         try {
-            CompanyResponseDTO updated = companyService.updateCompany(id, dto);
-            return ResponseEntity.ok(ApiResponse.success("Company updated successfully", updated));
+            return ResponseEntity.ok(ApiResponse.success("Company updated successfully",
+                companyService.updateCompany(id, dto)));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error(e.getMessage()));

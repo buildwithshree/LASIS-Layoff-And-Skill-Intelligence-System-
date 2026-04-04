@@ -18,6 +18,7 @@ public class CompanyResponseDTO {
     private String headquarters;
     private String website;
     private Boolean isActiveRecruiter;
+    private String recruiterEmail;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

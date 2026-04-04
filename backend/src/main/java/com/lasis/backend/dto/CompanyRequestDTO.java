@@ -29,4 +29,7 @@ public class CompanyRequestDTO {
     private String website;
 
     private Boolean isActiveRecruiter = true;
+
+    @Size(max = 150)
+    private String recruiterEmail;
 }

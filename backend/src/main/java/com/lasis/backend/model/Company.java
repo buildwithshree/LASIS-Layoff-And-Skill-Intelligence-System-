@@ -41,6 +41,9 @@ public class Company {
     @Column(name = "is_active_recruiter")
     private Boolean isActiveRecruiter = true;
 
+    @Column(name = "recruiter_email", length = 150)
+    private String recruiterEmail;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
