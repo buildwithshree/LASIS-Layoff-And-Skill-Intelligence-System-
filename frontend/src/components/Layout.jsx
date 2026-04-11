@@ -14,9 +14,6 @@ const recruiterNav = [
 
 const adminNav = [
   { label: "Dashboard", path: "/admin" },
-  { label: "Students", path: "/admin/students" },
-  { label: "Companies", path: "/admin/companies" },
-  { label: "Jobs", path: "/admin/jobs" },
 ];
 
 const navByRole = {

@@ -10,15 +10,7 @@ import Jobs from "./pages/Jobs";
 import MyReadiness from "./pages/MyReadiness";
 import Onboarding from "./pages/Onboarding";
 import RecruiterDashboard from "./pages/RecruiterDashboard";
-
-const PlaceholderPage = ({ title }) => (
-  <div className="flex items-center justify-center min-h-64">
-    <div className="text-center">
-      <h1 className="text-xl font-medium text-gray-800">{title}</h1>
-      <p className="text-sm text-gray-400 mt-2">Coming up this session</p>
-    </div>
-  </div>
-);
+import AdminDashboard from "./pages/AdminDashboard";
 
 const ProtectedLayout = ({ children, allowedRoles }) => (
   <ProtectedRoute allowedRoles={allowedRoles}>
@@ -34,27 +26,26 @@ const App = () => {
           {/* Public */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/onboarding" element={
-            <ProtectedRoute allowedRoles={["STUDENT"]}>
-              <Onboarding />
-            </ProtectedRoute>
-          } />
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute allowedRoles={["STUDENT"]}>
+                <Onboarding />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Student */}
-          <Route path="/dashboard" element={<ProtectedLayout allowedRoles={["STUDENT"]}><StudentDashboard /></ProtectedLayout>} />
-          <Route path="/companies" element={<ProtectedLayout allowedRoles={["STUDENT"]}><Companies /></ProtectedLayout>} />
-          <Route path="/jobs" element={<ProtectedLayout allowedRoles={["STUDENT"]}><Jobs /></ProtectedLayout>} />
-          <Route path="/readiness" element={<ProtectedLayout allowedRoles={["STUDENT"]}><MyReadiness /></ProtectedLayout>} />
+          <Route path="/dashboard"  element={<ProtectedLayout allowedRoles={["STUDENT"]}><StudentDashboard /></ProtectedLayout>} />
+          <Route path="/companies"  element={<ProtectedLayout allowedRoles={["STUDENT"]}><Companies /></ProtectedLayout>} />
+          <Route path="/jobs"       element={<ProtectedLayout allowedRoles={["STUDENT"]}><Jobs /></ProtectedLayout>} />
+          <Route path="/readiness"  element={<ProtectedLayout allowedRoles={["STUDENT"]}><MyReadiness /></ProtectedLayout>} />
 
           {/* Recruiter */}
-          <Route path="/recruiter" element={<ProtectedLayout allowedRoles={["RECRUITER"]}><RecruiterDashboard /></ProtectedLayout>} />
-          <Route path="/applications" element={<ProtectedLayout allowedRoles={["RECRUITER"]}><PlaceholderPage title="Applications" /></ProtectedLayout>} />
+          <Route path="/recruiter"  element={<ProtectedLayout allowedRoles={["RECRUITER"]}><RecruiterDashboard /></ProtectedLayout>} />
 
-          {/* Admin */}
-          <Route path="/admin" element={<ProtectedLayout allowedRoles={["ADMIN"]}><PlaceholderPage title="Admin Dashboard" /></ProtectedLayout>} />
-          <Route path="/admin/students" element={<ProtectedLayout allowedRoles={["ADMIN"]}><PlaceholderPage title="All Students" /></ProtectedLayout>} />
-          <Route path="/admin/companies" element={<ProtectedLayout allowedRoles={["ADMIN"]}><PlaceholderPage title="All Companies" /></ProtectedLayout>} />
-          <Route path="/admin/jobs" element={<ProtectedLayout allowedRoles={["ADMIN"]}><PlaceholderPage title="All Jobs" /></ProtectedLayout>} />
+          {/* Admin — single route, tabs handle sub-sections */}
+          <Route path="/admin"      element={<ProtectedLayout allowedRoles={["ADMIN"]}><AdminDashboard /></ProtectedLayout>} />
 
           {/* Fallback */}
           <Route path="/" element={<Navigate to="/login" replace />} />
