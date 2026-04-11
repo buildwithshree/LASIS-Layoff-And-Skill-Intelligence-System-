@@ -39,6 +39,13 @@ const statusBadge = (status) => {
   return map[status?.toUpperCase()] || "bg-gray-100 text-gray-600";
 };
 
+const severityColor = (score) => {
+  if (score >= 0.75) return "text-red-600";
+  if (score >= 0.5)  return "text-amber-600";
+  if (score >= 0.3)  return "text-yellow-600";
+  return "text-gray-500";
+};
+
 // ─── Shared UI primitives ────────────────────────────────────────────────────
 
 const Spinner = () => (
@@ -83,9 +90,9 @@ const Tab = ({ label, active, onClick }) => (
 // ─── Overview Tab ────────────────────────────────────────────────────────────
 
 const OverviewTab = () => {
-  const [data, setData] = useState(null);
+  const [data, setData]     = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError]   = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -98,13 +105,13 @@ const OverviewTab = () => {
           api.get("/jobs/active"),
           api.get("/applications"),
         ]);
-        const appData = apps.data?.data || [];
-        const selected = appData.filter((a) => a.status === "SELECTED").length;
+        const appData    = apps.data?.data || [];
+        const selected   = appData.filter((a) => a.status === "SELECTED").length;
         const interviewed = appData.filter((a) => a.status === "INTERVIEWED").length;
         setData({
-          students: (students.data?.data || []).length,
-          companies: (companies.data?.data || []).length,
-          jobs: (jobs.data?.data || []).length,
+          students:     (students.data?.data || []).length,
+          companies:    (companies.data?.data || []).length,
+          jobs:         (jobs.data?.data || []).length,
           applications: appData.length,
           selected,
           interviewed,
@@ -119,25 +126,25 @@ const OverviewTab = () => {
   }, []);
 
   if (loading) return <Spinner />;
-  if (error) return <ErrorBox message={error} />;
-  if (!data) return null;
+  if (error)   return <ErrorBox message={error} />;
+  if (!data)   return null;
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-4 gap-4">
-        <MetricCard label="Total students"     value={fmt(data.students)}     sub="registered" />
-        <MetricCard label="Total companies"    value={fmt(data.companies)}    sub="in system" />
-        <MetricCard label="Active job postings" value={fmt(data.jobs)}        sub="open roles" />
-        <MetricCard label="Total applications" value={fmt(data.applications)} sub={`${fmt(data.selected)} selected · ${fmt(data.interviewed)} interviewed`} />
+        <MetricCard label="Total students"      value={fmt(data.students)}     sub="registered" />
+        <MetricCard label="Total companies"     value={fmt(data.companies)}    sub="in system" />
+        <MetricCard label="Active job postings" value={fmt(data.jobs)}         sub="open roles" />
+        <MetricCard label="Total applications"  value={fmt(data.applications)} sub={`${fmt(data.selected)} selected · ${fmt(data.interviewed)} interviewed`} />
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl p-6">
         <p className="text-sm font-medium text-gray-700 mb-4">Application pipeline</p>
         <div className="grid grid-cols-4 gap-4">
           {[
-            { label: "Applied",     value: data.applications - data.selected - data.interviewed, color: "bg-gray-200" },
-            { label: "Interviewed", value: data.interviewed, color: "bg-purple-400" },
-            { label: "Selected",    value: data.selected,    color: "bg-teal-500" },
+            { label: "Applied",        value: data.applications - data.selected - data.interviewed, color: "bg-gray-200" },
+            { label: "Interviewed",    value: data.interviewed,   color: "bg-purple-400" },
+            { label: "Selected",       value: data.selected,      color: "bg-teal-500" },
             { label: "Placement rate", value: data.applications > 0 ? `${Math.round((data.selected / data.applications) * 100)}%` : "0%", color: null },
           ].map((item) => (
             <div key={item.label} className="bg-gray-50 rounded-lg p-4">
@@ -157,23 +164,22 @@ const OverviewTab = () => {
 // ─── Companies Tab ───────────────────────────────────────────────────────────
 
 const CompaniesTab = () => {
-  const [companies, setCompanies]   = useState([]);
-  const [riskMap, setRiskMap]       = useState({});
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState("");
-  const [expandedId, setExpandedId] = useState(null);
-  const [recalcIds, setRecalcIds]   = useState({});
+  const [companies, setCompanies]     = useState([]);
+  const [riskMap, setRiskMap]         = useState({});
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState("");
+  const [expandedId, setExpandedId]   = useState(null);
+  const [recalcIds, setRecalcIds]     = useState({});
   const [signalForms, setSignalForms] = useState({});
-  const [signalErrors, setSignalErrors] = useState({});
+  const [signalErrors, setSignalErrors]   = useState({});
   const [signalSuccess, setSignalSuccess] = useState({});
-  const [recruiterForms, setRecruiterForms] = useState({});
-  const [recruiterSaving, setRecruiterSaving] = useState({});
-  const [recruiterErrors, setRecruiterErrors] = useState({});
+  const [recruiterForms, setRecruiterForms]     = useState({});
+  const [recruiterSaving, setRecruiterSaving]   = useState({});
+  const [recruiterErrors, setRecruiterErrors]   = useState({});
   const [recruiterSuccess, setRecruiterSuccess] = useState({});
 
   const SIGNAL_TYPES = ["LAYOFF", "HIRING_FREEZE", "FUNDING_CUT", "REVENUE_DROP", "RESTRUCTURING", "POSITIVE_GROWTH"];
-
-  const blankSignal = { signalType: "LAYOFF", severity: 5, sourceUrl: "", notes: "" };
+  const blankSignal  = { signalType: "LAYOFF", severity: 5, sourceUrl: "", notes: "" };
 
   useEffect(() => {
     const load = async () => {
@@ -190,7 +196,6 @@ const CompaniesTab = () => {
         const map = {};
         rList.forEach((r) => { map[r.companyId] = r; });
         setRiskMap(map);
-        // init forms
         const sf = {};
         const rf = {};
         cList.forEach((c) => {
@@ -213,11 +218,9 @@ const CompaniesTab = () => {
     try {
       const res = await api.get(`/risk/recalculate/${companyId}`);
       const updated = res.data?.data;
-      if (updated) {
-        setRiskMap((p) => ({ ...p, [companyId]: updated }));
-      }
-    } catch (err) {
-      // silently fail — non-critical action
+      if (updated) setRiskMap((p) => ({ ...p, [companyId]: updated }));
+    } catch {
+      // non-critical
     } finally {
       setRecalcIds((p) => ({ ...p, [companyId]: false }));
     }
@@ -225,7 +228,7 @@ const CompaniesTab = () => {
 
   const submitSignal = async (companyId) => {
     const form = signalForms[companyId];
-    setSignalErrors((p) => ({ ...p, [companyId]: "" }));
+    setSignalErrors((p)  => ({ ...p, [companyId]: "" }));
     setSignalSuccess((p) => ({ ...p, [companyId]: "" }));
 
     if (!form.signalType) {
@@ -240,13 +243,12 @@ const CompaniesTab = () => {
     try {
       await api.post(`/risk/signal/${companyId}`, {
         signalType: form.signalType,
-        severity: Number(form.severity),
-        sourceUrl: form.sourceUrl || null,
-        notes: form.notes || null,
+        severity:   Number(form.severity),
+        sourceUrl:  form.sourceUrl || null,
+        notes:      form.notes     || null,
       });
       setSignalSuccess((p) => ({ ...p, [companyId]: "Risk signal added successfully." }));
-      setSignalForms((p) => ({ ...p, [companyId]: { ...blankSignal } }));
-      // recalculate risk automatically after new signal
+      setSignalForms((p)   => ({ ...p, [companyId]: { ...blankSignal } }));
       await recalculate(companyId);
     } catch (err) {
       setSignalErrors((p) => ({ ...p, [companyId]: parseError(err) }));
@@ -255,7 +257,7 @@ const CompaniesTab = () => {
 
   const saveRecruiterEmail = async (companyId) => {
     const email = recruiterForms[companyId]?.trim();
-    setRecruiterErrors((p) => ({ ...p, [companyId]: "" }));
+    setRecruiterErrors((p)  => ({ ...p, [companyId]: "" }));
     setRecruiterSuccess((p) => ({ ...p, [companyId]: "" }));
 
     if (!email) {
@@ -293,24 +295,23 @@ const CompaniesTab = () => {
         const risk      = riskMap[company.companyId];
         const expanded  = expandedId === company.companyId;
         const isRecalc  = recalcIds[company.companyId];
-        const sigForm   = signalForms[company.companyId] || { ...blankSignal };
-        const sigErr    = signalErrors[company.companyId] || "";
+        const sigForm   = signalForms[company.companyId]  || { ...blankSignal };
+        const sigErr    = signalErrors[company.companyId]  || "";
         const sigOk     = signalSuccess[company.companyId] || "";
         const recEmail  = recruiterForms[company.companyId] ?? "";
         const recSaving = recruiterSaving[company.companyId];
-        const recErr    = recruiterErrors[company.companyId] || "";
+        const recErr    = recruiterErrors[company.companyId]  || "";
         const recOk     = recruiterSuccess[company.companyId] || "";
 
         return (
           <div key={company.companyId} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            {/* Row */}
             <button
               onClick={() => setExpandedId(expanded ? null : company.companyId)}
               className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
             >
               <div className="flex items-center gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-800">{company.name}</p>
+                  <p className="text-sm font-medium text-gray-800">{company.companyName}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{company.sector} · {company.headquarters}</p>
                 </div>
               </div>
@@ -334,14 +335,9 @@ const CompaniesTab = () => {
               </div>
             </button>
 
-            {/* Expanded detail */}
             {expanded && (
               <div className="border-t border-gray-100 px-6 py-5 space-y-6 bg-gray-50">
-
-                {/* Risk actions */}
                 <div className="grid grid-cols-2 gap-6">
-
-                  {/* Recalculate + Add signal */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Risk management</p>
@@ -354,10 +350,8 @@ const CompaniesTab = () => {
                       </button>
                     </div>
 
-                    {/* Add risk signal form */}
                     <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
                       <p className="text-xs text-gray-500 font-medium">Add risk signal</p>
-
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs text-gray-400 block mb-1">Signal type</label>
@@ -381,7 +375,6 @@ const CompaniesTab = () => {
                           />
                         </div>
                       </div>
-
                       <div>
                         <label className="text-xs text-gray-400 block mb-1">Source URL (optional)</label>
                         <input
@@ -392,7 +385,6 @@ const CompaniesTab = () => {
                           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
                         />
                       </div>
-
                       <div>
                         <label className="text-xs text-gray-400 block mb-1">Notes (optional)</label>
                         <textarea
@@ -403,10 +395,8 @@ const CompaniesTab = () => {
                           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 resize-none"
                         />
                       </div>
-
                       {sigErr && <p className="text-xs text-red-600">{sigErr}</p>}
                       {sigOk  && <p className="text-xs text-teal-600">{sigOk}</p>}
-
                       <button
                         onClick={() => submitSignal(company.companyId)}
                         className="w-full bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
@@ -416,7 +406,6 @@ const CompaniesTab = () => {
                     </div>
                   </div>
 
-                  {/* Recruiter email */}
                   <div className="space-y-4">
                     <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Recruiter assignment</p>
                     <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
@@ -444,7 +433,6 @@ const CompaniesTab = () => {
                       </button>
                     </div>
 
-                    {/* Current risk summary */}
                     {risk && (
                       <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-2">
                         <p className="text-xs text-gray-500 font-medium">Current risk breakdown</p>
@@ -491,7 +479,6 @@ const StudentsTab = () => {
         ]);
         const sList = sRes.data?.data || [];
         const aList = aRes.data?.data || [];
-        // count applications per student
         const countMap = {};
         aList.forEach((a) => {
           const sid = a.studentId || a.student?.studentId;
@@ -509,11 +496,7 @@ const StudentsTab = () => {
 
   const filtered = students.filter((s) => {
     const q = search.toLowerCase();
-    return (
-      !q ||
-      s.fullName?.toLowerCase().includes(q) ||
-      s.email?.toLowerCase().includes(q)
-    );
+    return !q || s.fullName?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
   });
 
   if (loading) return <Spinner />;
@@ -528,7 +511,6 @@ const StudentsTab = () => {
         onChange={(e) => setSearch(e.target.value)}
         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
       />
-
       {!filtered.length ? (
         <EmptyState message={search ? "No students match your search." : "No students found."} />
       ) : (
@@ -568,10 +550,10 @@ const StudentsTab = () => {
 // ─── Jobs Tab ────────────────────────────────────────────────────────────────
 
 const JobsTab = () => {
-  const [jobs, setJobs]         = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState("");
-  const [filter, setFilter]     = useState("ALL");
+  const [jobs, setJobs]           = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState("");
+  const [filter, setFilter]       = useState("ALL");
   const [closingId, setClosingId] = useState(null);
   const [closeError, setCloseError] = useState("");
 
@@ -630,9 +612,7 @@ const JobsTab = () => {
           </button>
         ))}
       </div>
-
       {closeError && <ErrorBox message={closeError} />}
-
       {!filtered.length ? (
         <EmptyState message="No jobs match this filter." />
       ) : (
@@ -708,7 +688,6 @@ const ApplicationsTab = () => {
   }, []);
 
   const STATUSES = ["ALL", "APPLIED", "INTERVIEWED", "SELECTED", "REJECTED"];
-
   const filtered = apps.filter((a) => filter === "ALL" || a.status === filter);
 
   if (loading) return <Spinner />;
@@ -731,9 +710,7 @@ const ApplicationsTab = () => {
           </button>
         ))}
       </div>
-
       <p className="text-xs text-gray-400">{filtered.length} application{filtered.length !== 1 ? "s" : ""}</p>
-
       {!filtered.length ? (
         <EmptyState message="No applications match this filter." />
       ) : (
@@ -778,14 +755,183 @@ const ApplicationsTab = () => {
   );
 };
 
+// ─── Live Scan Tab ───────────────────────────────────────────────────────────
+
+const LiveScanTab = () => {
+  const [scanning, setScanning]   = useState(false);
+  const [error, setError]         = useState("");
+  const [results, setResults]     = useState([]);
+  const [scannedAt, setScannedAt] = useState(null);
+  const [expandedCompany, setExpandedCompany] = useState(null);
+
+  const runScan = async () => {
+    setScanning(true);
+    setError("");
+    setResults([]);
+    setExpandedCompany(null);
+    try {
+      await api.post("/ml/trigger-scan");
+      // After scan completes, fetch fresh signals from DB per company
+      const [cRes, rRes] = await Promise.all([
+        api.get("/companies"),
+        api.get("/risk/all"),
+      ]);
+      const companies = cRes.data?.data || [];
+      const riskList  = rRes.data?.data || [];
+      const riskMap   = {};
+      riskList.forEach((r) => { riskMap[r.companyId] = r; });
+      setResults(companies.map((c) => ({ ...c, risk: riskMap[c.companyId] || null })));
+      setScannedAt(new Date());
+    } catch (err) {
+      setError(parseError(err));
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header card */}
+      <div className="bg-white border border-gray-200 rounded-xl p-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-800">Automated layoff data feed</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Scans live news for all companies via GNews, saves signals to the database,
+              and recalculates risk scores. Runs automatically every day at 6:00 AM.
+            </p>
+            {scannedAt && (
+              <p className="text-xs text-teal-600 mt-2">
+                Last scan: {scannedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                {" · "}{scannedAt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={runScan}
+            disabled={scanning}
+            className="bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2 shrink-0"
+          >
+            {scanning ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Scanning…
+              </>
+            ) : (
+              "Run scan now"
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Scanning state */}
+      {scanning && (
+        <div className="bg-white border border-gray-200 rounded-xl p-8 flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-gray-500">Fetching live news for all companies…</p>
+          <p className="text-xs text-gray-400">This may take 20–30 seconds depending on the number of companies.</p>
+        </div>
+      )}
+
+      {/* Error */}
+      {error && <ErrorBox message={error} />}
+
+      {/* Results */}
+      {!scanning && results.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-700">
+              {results.length} {results.length === 1 ? "company" : "companies"} scanned
+            </p>
+            <p className="text-xs text-gray-400">Signals saved to database · Risk scores updated</p>
+          </div>
+
+          {results.map((company) => {
+            const risk     = company.risk;
+            const expanded = expandedCompany === company.companyId;
+
+            return (
+              <div key={company.companyId} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setExpandedCompany(expanded ? null : company.companyId)}
+                  className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{company.companyName}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{company.sector}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {risk ? (
+                      <>
+                        <span className="text-xs text-gray-400">Risk index {risk.riskIndex?.toFixed(1)}</span>
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${riskBadge(risk.riskLevel)}`}>
+                          {risk.riskLevel}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-gray-300">No risk profile</span>
+                    )}
+                    <svg
+                      className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? "rotate-180" : ""}`}
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </button>
+
+                {expanded && risk && (
+                  <div className="border-t border-gray-100 px-6 py-4 bg-gray-50 space-y-3">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Updated risk breakdown</p>
+                    <div className="grid grid-cols-4 gap-3">
+                      {[
+                        { label: "Risk index",       value: risk.riskIndex },
+                        { label: "Stability score",  value: risk.stabilityScore },
+                        { label: "Layoff frequency", value: risk.layoffFrequency },
+                        { label: "Hiring trend",     value: risk.hiringTrend },
+                      ].map((item) => (
+                        <div key={item.label} className="bg-white border border-gray-200 rounded-lg p-3">
+                          <p className="text-xs text-gray-400">{item.label}</p>
+                          <p className="text-sm font-medium text-gray-700 mt-1">
+                            {typeof item.value === "number" ? item.value.toFixed(2) : item.value ?? "—"}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-400 pt-1">
+                      To view the individual signals that were saved, go to the Companies tab and expand this company.
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Empty state before first scan */}
+      {!scanning && !error && results.length === 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl p-12 flex flex-col items-center gap-2 text-center">
+          <p className="text-sm text-gray-500">No scan has been run yet in this session.</p>
+          <p className="text-xs text-gray-400">
+            Click "Run scan now" to fetch live layoff signals for all companies immediately.
+            The system also runs this automatically every morning at 6:00 AM.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Root component ──────────────────────────────────────────────────────────
 
 const TABS = [
-  { key: "overview",      label: "Overview" },
-  { key: "companies",     label: "Companies" },
-  { key: "students",      label: "Students" },
-  { key: "jobs",          label: "Jobs" },
-  { key: "applications",  label: "Applications" },
+  { key: "overview",     label: "Overview" },
+  { key: "companies",    label: "Companies" },
+  { key: "students",     label: "Students" },
+  { key: "jobs",         label: "Jobs" },
+  { key: "applications", label: "Applications" },
+  { key: "livescan",     label: "Live Scan" },
 ];
 
 const AdminDashboard = () => {
@@ -798,19 +944,18 @@ const AdminDashboard = () => {
       case "students":     return <StudentsTab />;
       case "jobs":         return <JobsTab />;
       case "applications": return <ApplicationsTab />;
+      case "livescan":     return <LiveScanTab />;
       default:             return null;
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-xl font-medium text-gray-900">Admin dashboard</h1>
         <p className="text-sm text-gray-400 mt-0.5">System-wide oversight and management</p>
       </div>
 
-      {/* Tab bar */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
         {TABS.map((t) => (
           <Tab
@@ -822,7 +967,6 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* Tab content */}
       <div>{renderTab()}</div>
     </div>
   );

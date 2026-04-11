@@ -2,6 +2,7 @@ package com.lasis.backend.controller;
 
 import com.lasis.backend.dto.ApiResponse;
 import com.lasis.backend.service.MLService;
+import com.lasis.backend.service.RiskSchedulerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +17,9 @@ public class MLController {
     @Autowired
     private MLService mlService;
 
+    @Autowired
+    private RiskSchedulerService riskSchedulerService;
+
     // ── Health check ──────────────────────────────────────────
     @GetMapping("/health")
     public ResponseEntity<ApiResponse<Map<String, Object>>> health() {
@@ -29,10 +33,10 @@ public class MLController {
             @RequestBody Map<String, Object> request) {
 
         double totalLaidOff = Double.parseDouble(request.get("total_laid_off").toString());
-        double fundsRaised = Double.parseDouble(request.get("funds_raised").toString());
-        String industry = request.get("industry").toString();
-        String stage = request.get("stage").toString();
-        String country = request.get("country").toString();
+        double fundsRaised  = Double.parseDouble(request.get("funds_raised").toString());
+        String industry     = request.get("industry").toString();
+        String stage        = request.get("stage").toString();
+        String country      = request.get("country").toString();
 
         Map<String, Object> result = mlService.predictRisk(
                 totalLaidOff, fundsRaised, industry, stage, country);
@@ -45,11 +49,24 @@ public class MLController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> skillMatch(
             @RequestBody Map<String, Object> request) {
 
-        List<String> studentSkills = (List<String>) request.get("student_skills");
+        List<String> studentSkills  = (List<String>) request.get("student_skills");
         List<String> requiredSkills = (List<String>) request.get("required_skills");
 
         Map<String, Object> result = mlService.matchSkills(studentSkills, requiredSkills);
 
         return ResponseEntity.ok(ApiResponse.success("Skill match completed", result));
+    }
+
+    // ── Manually trigger overnight auto-scan (admin only) ─────
+    @PostMapping("/trigger-scan")
+    public ResponseEntity<ApiResponse<String>> triggerScan() {
+        try {
+            riskSchedulerService.autoScanAllCompanies();
+            return ResponseEntity.ok(ApiResponse.success(
+                "Auto-scan triggered successfully. Signals saved and risks recalculated."));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(ApiResponse.error(
+                "Auto-scan failed. Check that the ML service is running."));
+        }
     }
 }
