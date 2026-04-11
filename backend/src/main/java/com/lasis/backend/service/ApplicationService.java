@@ -43,6 +43,14 @@ public class ApplicationService {
     }
 
     // ─── Public Service Methods ─────────────────────────────────────────
+
+    public List<ApplicationResponseDTO> getAllApplications() {
+        return applicationRepository.findAll()
+                .stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
+    }
+
     public ApplicationResponseDTO applyToJob(Integer studentId, Integer jobId) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new RuntimeException("Student not found: " + studentId));
