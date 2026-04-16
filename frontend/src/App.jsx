@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import OAuth2Callback from "./pages/OAuth2Callback";
 import StudentDashboard from "./pages/StudentDashboard";
 import Companies from "./pages/Companies";
 import Jobs from "./pages/Jobs";
@@ -24,8 +25,9 @@ const App = () => {
       <BrowserRouter>
         <Routes>
           {/* Public */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/login"             element={<Login />} />
+          <Route path="/register"          element={<Register />} />
+          <Route path="/oauth2/callback"   element={<OAuth2Callback />} />
           <Route
             path="/onboarding"
             element={
@@ -44,7 +46,7 @@ const App = () => {
           {/* Recruiter */}
           <Route path="/recruiter"  element={<ProtectedLayout allowedRoles={["RECRUITER"]}><RecruiterDashboard /></ProtectedLayout>} />
 
-          {/* Admin — single route, tabs handle sub-sections */}
+          {/* Admin */}
           <Route path="/admin"      element={<ProtectedLayout allowedRoles={["ADMIN"]}><AdminDashboard /></ProtectedLayout>} />
 
           {/* Fallback */}
