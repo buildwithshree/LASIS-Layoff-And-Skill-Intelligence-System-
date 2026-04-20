@@ -12,6 +12,7 @@ import MyReadiness from "./pages/MyReadiness";
 import Onboarding from "./pages/Onboarding";
 import RecruiterDashboard from "./pages/RecruiterDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import LiveFeed from "./pages/LiveFeed";
 
 const ProtectedLayout = ({ children, allowedRoles }) => (
   <ProtectedRoute allowedRoles={allowedRoles}>
@@ -25,9 +26,9 @@ const App = () => {
       <BrowserRouter>
         <Routes>
           {/* Public */}
-          <Route path="/login"             element={<Login />} />
-          <Route path="/register"          element={<Register />} />
-          <Route path="/oauth2/callback"   element={<OAuth2Callback />} />
+          <Route path="/login"           element={<Login />} />
+          <Route path="/register"        element={<Register />} />
+          <Route path="/oauth2/callback" element={<OAuth2Callback />} />
           <Route
             path="/onboarding"
             element={
@@ -38,16 +39,17 @@ const App = () => {
           />
 
           {/* Student */}
-          <Route path="/dashboard"  element={<ProtectedLayout allowedRoles={["STUDENT"]}><StudentDashboard /></ProtectedLayout>} />
-          <Route path="/companies"  element={<ProtectedLayout allowedRoles={["STUDENT"]}><Companies /></ProtectedLayout>} />
-          <Route path="/jobs"       element={<ProtectedLayout allowedRoles={["STUDENT"]}><Jobs /></ProtectedLayout>} />
-          <Route path="/readiness"  element={<ProtectedLayout allowedRoles={["STUDENT"]}><MyReadiness /></ProtectedLayout>} />
+          <Route path="/dashboard" element={<ProtectedLayout allowedRoles={["STUDENT"]}><StudentDashboard /></ProtectedLayout>} />
+          <Route path="/companies" element={<ProtectedLayout allowedRoles={["STUDENT"]}><Companies /></ProtectedLayout>} />
+          <Route path="/jobs"      element={<ProtectedLayout allowedRoles={["STUDENT"]}><Jobs /></ProtectedLayout>} />
+          <Route path="/readiness" element={<ProtectedLayout allowedRoles={["STUDENT"]}><MyReadiness /></ProtectedLayout>} />
 
           {/* Recruiter */}
-          <Route path="/recruiter"  element={<ProtectedLayout allowedRoles={["RECRUITER"]}><RecruiterDashboard /></ProtectedLayout>} />
+          <Route path="/recruiter" element={<ProtectedLayout allowedRoles={["RECRUITER"]}><RecruiterDashboard /></ProtectedLayout>} />
 
           {/* Admin */}
-          <Route path="/admin"      element={<ProtectedLayout allowedRoles={["ADMIN"]}><AdminDashboard /></ProtectedLayout>} />
+          <Route path="/admin"     element={<ProtectedLayout allowedRoles={["ADMIN"]}><AdminDashboard /></ProtectedLayout>} />
+          <Route path="/live-feed" element={<ProtectedLayout allowedRoles={["ADMIN"]}><LiveFeed /></ProtectedLayout>} />
 
           {/* Fallback */}
           <Route path="/" element={<Navigate to="/login" replace />} />
