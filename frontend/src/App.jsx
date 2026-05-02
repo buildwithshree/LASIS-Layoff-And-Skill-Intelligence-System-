@@ -4,7 +4,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import OAuth2Callback from "./pages/OAuth2Callback";
 import StudentDashboard from "./pages/StudentDashboard";
 import Companies from "./pages/Companies";
 import Jobs from "./pages/Jobs";
@@ -26,17 +25,13 @@ const App = () => {
       <BrowserRouter>
         <Routes>
           {/* Public */}
-          <Route path="/login"           element={<Login />} />
-          <Route path="/register"        element={<Register />} />
-          <Route path="/oauth2/callback" element={<OAuth2Callback />} />
-          <Route
-            path="/onboarding"
-            element={
-              <ProtectedRoute allowedRoles={["STUDENT"]}>
-                <Onboarding />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/login"      element={<Login />} />
+          <Route path="/register"   element={<Register />} />
+          <Route path="/onboarding" element={
+            <ProtectedRoute allowedRoles={["STUDENT"]}>
+              <Onboarding />
+            </ProtectedRoute>
+          } />
 
           {/* Student */}
           <Route path="/dashboard" element={<ProtectedLayout allowedRoles={["STUDENT"]}><StudentDashboard /></ProtectedLayout>} />
