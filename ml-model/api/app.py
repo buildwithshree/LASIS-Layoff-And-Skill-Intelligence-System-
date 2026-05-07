@@ -364,5 +364,7 @@ def parse_resume():
 
 # ── Run ───────────────────────────────────────────────────────
 if __name__ == "__main__":
-    logger.info("Starting LASIS ML API with Waitress (production server)...")
-    serve(app, host="0.0.0.0", port=5000, threads=4)
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    logger.info(f"Starting LASIS ML API with Waitress on port {port}...")
+    serve(app, host="0.0.0.0", port=port, threads=4)
